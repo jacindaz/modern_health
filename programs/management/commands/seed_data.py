@@ -46,83 +46,91 @@ PROGRAMS = {
     }
 }
 
-class Command(BaseCommand):
+class SeedData(BaseCommand):
+    help = "add seed data for testing and development."
+
     def handle(self, *args, **options):
-        self.create_core_pillar_program()
+        create_program_and_associated_objects()
 
-    def create_options(self, options):
-        for name in options:
-            Option(name=name).save()
 
-    def create_activities(self, activities, mult_choice_option_objects):
-        for activity in activities:
-            new_act = Activity(
-                activity_type=activity["activity_type"],
-                html_snippet=activity["html_snippet"],
-                question=activity["question"],
-            )
+def clear_data():
+    logger.info("Removing all seed data")
+    sql = f"""
+    delete from {Activity.options.through._meta.db_table};
+    delete from {Option._meta.db_table};
+    delete from {Section.activities.through._meta.db_table};
+    delete from {Activity._meta.db_table};
+    delete from {Program.sections.through._meta.db_table};
+    delete from {Section._meta.db_table};
+    delete from {Program._meta.db_table};
+    """
+    cursor = connection.cursor()
+    cursor.execute(sql)
+    logging.info("All seed data deleted/rolled back.")
+
+
+def create_options(option_names):
+    for name in option_names:
+        Option(name=name).save()
+
+
+def create_activities(activities_data, mult_choice_option_objects):
+    for activity in activities_data:
+        new_act = Activity(
+            activity_type=activity["activity_type"],
+            html_snippet=activity["html_snippet"],
+            question=activity["question"],
+        )
+        new_act.save()
+
+        if activity["activity_type"] == ActivityType.MULT_CHOICE.value:
+            new_act.refresh_from_db()
+            new_act.options.set(mult_choice_option_objects)
             new_act.save()
 
-            if activity["activity_type"] == ActivityType.MULT_CHOICE.value:
-                new_act.refresh_from_db()
-                new_act.options.set(mult_choice_option_objects)
-                new_act.save()
-
-    def create_sections(self, sections, activity_objects):
-        for section_desc, section in sections.items():
-            new_sect = Section(
-                description=section_desc,
-                image_url=section["image_url"],
-                order_index=section["order_index"],
-            )
-            new_sect.save()
-
-            new_sect.activities.set(activity_objects)
-            new_sect.save()
-
-    def save_program(self, program, section_objects):
-        new_prog = Program(
-            name=program["name"],
-            description=program["description"],
+def create_sections(section_data, activity_objects):
+    for section_desc, section in section_data.items():
+        new_sect = Section(
+            description=section_desc,
+            image_url=section["image_url"],
+            order_index=section["order_index"],
         )
-        new_prog.save()
-        new_prog.sections.set(section_objects)
+        new_sect.save()
 
-    def create_core_pillar_program(self, ):
-        program_name = "core_pillars"
+        new_sect.activities.set(activity_objects)
+        new_sect.save()
 
-        try:
-            logging.info(f"Creating seed data for program {program_name}")
-            options = PROGRAMS[program_name]["options"]
-            self.create_options(options)
-            logging.info("Created options")
+def create_program(program, section_objects):
+    new_prog = Program(
+        name=program["name"],
+        description=program["description"],
+    )
+    new_prog.save()
+    new_prog.sections.set(section_objects)
 
-            activities = PROGRAMS[program_name]["activities"]
-            saved_options = Option.objects.all()
-            self.create_activities(activities, saved_options)
-            logging.info("Created activities")
+def create_program_and_associated_objects(programs_data=PROGRAMS):
+    program_name = "core_pillars"
 
-            sections = PROGRAMS[program_name]["sections"]
-            saved_activities = Activity.objects.all()
-            self.create_sections(sections, saved_activities)
-            logging.info("Created sections")
+    try:
+        logging.info(f"Creating seed data for program {program_name}")
+        options = programs_data[program_name]["options"]
+        self.create_options(options)
+        logging.info("Created options")
 
-            program = PROGRAMS[program_name]["program"]
-            saved_sections = Section.objects.all()
-            self.save_program(program, saved_sections)
-            logging.info("Created programs")
-        except Exception as e:
-            logging.warning(f"Seed data failed to save. Rolling back.\n{e}")
-            sql = f"""
-            delete from {Activity.options.through._meta.db_table};
-            delete from {Option._meta.db_table};
-            delete from {Section.activities.through._meta.db_table};
-            delete from {Activity._meta.db_table};
-            delete from {Program.sections.through._meta.db_table};
-            delete from {Section._meta.db_table};
-            delete from {Program._meta.db_table};
-            """
-            cursor = connection.cursor()
-            cursor.execute(sql)
+        activities = programs_data[program_name]["activities"]
+        saved_options = Option.objects.all()
+        self.create_activities(activities, saved_options)
+        logging.info("Created activities")
 
-            logging.info("All seed data deleted/rolled back.")
+        sections = programs_data[program_name]["sections"]
+        saved_activities = Activity.objects.all()
+        self.create_sections(sections, saved_activities)
+        logging.info("Created sections")
+
+        program = programs_data[program_name]["program"]
+        saved_sections = Section.objects.all()
+        self.create_program(program, saved_sections)
+        logging.info("Created programs")
+    except Exception as e:
+        logging.warning(f"Seed data failed to save. Rolling back.\n{e}")
+        clear_data()
