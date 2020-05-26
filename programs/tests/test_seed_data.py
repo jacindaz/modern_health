@@ -62,7 +62,7 @@ def test_create_sections():
 
 
 @pytest.mark.django_db
-def test_save_program():
+def test_create_program():
     program_data = {
         "name": "Core Pillars",
         "description": "core pillars description",
@@ -72,3 +72,14 @@ def test_save_program():
     saved_program = Program.objects.all()
     assert len(saved_program) == 1
     assert saved_program[0].name == "Core Pillars"
+
+
+@pytest.mark.django_db
+def test_clear_data():
+    Program(name="test 1", description="desc").save()
+    Program(name="test 2", description="desc").save()
+    assert Program.objects.count() == 2
+
+    seed.clear_data()
+
+    assert Program.objects.count() == 0
