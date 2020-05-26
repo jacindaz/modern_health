@@ -114,11 +114,11 @@ class Command(BaseCommand):
         except Exception as e:
             logging.warning(f"Seed data failed to save. Rolling back.\n{e}")
             sql = f"""
-            delete from {Activity.options.field.related_query_name()};
+            delete from {Activity.options.through._meta.db_table};
             delete from {Option._meta.db_table};
-            delete from {Section.activities.field.related_query_name()};
+            delete from {Section.activities.through._meta.db_table};
             delete from {Activity._meta.db_table};
-            delete from {Program.sections.field.related_query_name()};
+            delete from {Program.sections.through._meta.db_table};
             delete from {Section._meta.db_table};
             delete from {Program._meta.db_table};
             """

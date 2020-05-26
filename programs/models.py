@@ -20,7 +20,7 @@ class Activity(date_fields.DefaultDateFields):
     activity_type = models.CharField(max_length=100, choices=[(activity, activity.value) for activity in ActivityType])
     html_snippet = models.TextField(null=True)
     question = models.TextField(null=True)
-    options = models.ManyToManyField(Option, related_name="activities_options")
+    options = models.ManyToManyField(Option, related_name="activities")
 
     class Meta:
         db_table = "activities"
@@ -30,7 +30,7 @@ class Section(date_fields.DefaultDateFields):
     description = models.TextField()
     image_url = models.TextField(null=False, blank=False)
     order_index = models.IntegerField(default=0)
-    activities = models.ManyToManyField(Activity, related_name="sections_activities")
+    activities = models.ManyToManyField(Activity, related_name="sections")
 
     class Meta:
         db_table = "sections"
@@ -39,7 +39,7 @@ class Section(date_fields.DefaultDateFields):
 class Program(date_fields.DefaultDateFields):
     name = models.CharField(max_length=200)
     description = models.TextField()
-    sections = models.ManyToManyField(Section, related_name="programs_sections")
+    sections = models.ManyToManyField(Section, related_name="programs")
 
     class Meta:
         db_table = "programs"
