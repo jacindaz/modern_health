@@ -9,7 +9,7 @@ from programs.models import Activity,ActivityType,Program,Option,Section
 logging.basicConfig(level=logging.INFO)
 
 PROGRAMS = {
-    "core_pillars": {
+    "Core Pillars": {
         "program": {
             "name": "Core Pillars",
             "description": "core pillars description",
@@ -44,10 +44,10 @@ PROGRAMS = {
         ],
         "options": ["Increase Focus", "Improve Concentration", "Mental Clarity", "Reduce Stress", "Respond With Kindness"]
     },
-    "core_pillars 2": {
+    "Core Pillars 2": {
         "program": {
-            "name": "Core Pillars",
-            "description": "core pillars description",
+            "name": "Core Pillars 2",
+            "description": "core pillars 2 description",
         },
         "sections": {
             "Mindfulness": {
@@ -105,11 +105,15 @@ def clear_data():
 
 
 def create_options(option_names):
+    options = []
     for name in option_names:
-        Option.objects.get_or_create(name=name)
+        new = Option.objects.get_or_create(name=name)[0]
+        options.append(new)
+    return options
 
 
 def create_activities(activities_data, mult_choice_option_objects):
+    activities = []
     for activity in activities_data:
         new_act = Activity.objects.get_or_create(
             activity_type=activity["activity_type"],
@@ -121,8 +125,12 @@ def create_activities(activities_data, mult_choice_option_objects):
             new_act.refresh_from_db()
             new_act.options.set(mult_choice_option_objects)
             new_act.save()
+        activities.append(new_act)
+    return activities
+
 
 def create_sections(section_data, activity_objects):
+    sections = []
     for section_desc, section in section_data.items():
         new_sect = Section.objects.get_or_create(
             description=section_desc,
@@ -131,6 +139,9 @@ def create_sections(section_data, activity_objects):
         )[0]
         new_sect.activities.set(activity_objects)
         new_sect.save()
+        sections.append(new_sect)
+    return sections
+
 
 def create_program(program, section_objects):
     new_prog = Program.objects.get_or_create(
@@ -140,26 +151,24 @@ def create_program(program, section_objects):
     new_prog.sections.set(section_objects)
     new_prog.save()
 
+
 def create_program_and_associated_objects(all_programs=PROGRAMS):
     for program_name,program_data in all_programs.items():
         try:
             logging.info(f"Creating seed data for program {program_name}")
             options = program_data["options"]
-            create_options(options)
+            saved_options = create_options(options)
             logging.info("Created options")
 
             activities = program_data["activities"]
-            saved_options = Option.objects.all()
-            create_activities(activities, saved_options)
+            saved_activities = create_activities(activities, saved_options)
             logging.info("Created activities")
 
             sections = program_data["sections"]
-            saved_activities = Activity.objects.all()
-            create_sections(sections, saved_activities)
+            saved_sections = create_sections(sections, saved_activities)
             logging.info("Created sections")
 
             program = program_data["program"]
-            saved_sections = Section.objects.all()
             create_program(program, saved_sections)
             logging.info("Created programs")
         except Exception as e:

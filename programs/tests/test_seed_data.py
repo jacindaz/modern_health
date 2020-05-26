@@ -83,3 +83,18 @@ def test_clear_data():
     seed.clear_data()
 
     assert Program.objects.count() == 0
+
+
+@pytest.mark.django_db
+def test_create_program_and_associated_objects():
+    seed.clear_data()
+    seed.create_program_and_associated_objects(seed.PROGRAMS)
+
+    programs = Program.objects.all()
+    assert len(programs) == len(seed.PROGRAMS.keys())
+
+    for program in programs:
+        program_data = seed.PROGRAMS[program.name]
+
+        section_descriptions = sorted(list(program_data["sections"].keys()))
+        assert section_descriptions == sorted([section.description for section in program.sections.all()])
