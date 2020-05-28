@@ -26,6 +26,12 @@ def program_objects():
 
 @pytest.mark.django_db
 def test_get_programs(program_objects):
+    """
+    With more time, I would have added more test
+    cases, tested the other endpoints, adding parametrization
+    with pytest, and tested particular queries in endpoints,
+    such as the query for the section- endpoints.
+    """
     url = reverse("program-list")
     client = Client()
     response = client.get(url, format="json")
