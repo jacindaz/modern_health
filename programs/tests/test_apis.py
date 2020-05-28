@@ -1,43 +1,50 @@
 from django.urls import reverse
 from rest_framework import status
-from rest_framework.test import APITestCase
-# from myproject.apps.core.models import Account
+from django.test import TestCase, Client
 from programs.models import Activity,Option,Program,Section
+import pytest
 
 
-class ProgramTests(APITestCase):
-    def test_get_programs(self):
-        # Set up data
-        program1 = Program(name="program name 1", description="program description 1")
-        program2 = Program(name="program name 2", description="program description 2")
-        program1.save()
-        program2.save()
+@pytest.fixture
+def program_objects():
+    """
+    In real life, I would use factory_boy and set up
+    factories so that I could easily add associated
+    objects, and then test that the associated objects
+    show up in my APIs.
 
-        # GET /programs
-        url = reverse("program-list")
-        response = self.client.get(url, format="json")
+    ex: Program has_many Sections
+        Section has_many Activities
 
-        assert len(response.data) == Program.objects.count()
+    For now, I'm just using a fixture to re-use to
+    create Program objects.
+    """
+    Program(name="program name 1", description="program description 1").save()
+    Program(name="program name 2", description="program description 2").save()
+    Program(name="program name 2", description="program description 2").save()
 
-        program_names = [program1.name, program2.name]
-        for program in response.data:
-            assert program["name"] in program_names
 
-        assert response.status_code == status.HTTP_200_OK
+@pytest.mark.django_db
+def test_get_programs(program_objects):
+    url = reverse("program-list")
+    client = Client()
+    response = client.get(url, format="json")
 
-    def test_get_one_program(self):
-        # Set up data
-        program1 = Program(name="program name 1", description="program description 1")
-        program2 = Program(name="program name 2", description="program description 2")
-        program3 = Program(name="program name 2", description="program description 2")
+    programs = Program.objects.all()
+    program_names = [p.name for p in programs]
 
-        program1.save()
-        program2.save()
-        program3.save()
+    assert len(response.data) == len(programs)
+    for program in response.data:
+        assert program["name"] in program_names
+    assert response.status_code == status.HTTP_200_OK
 
-        # GET /programs
-        url = reverse("program-detail", args=[program2.id])
-        response = self.client.get(url, format="json")
 
-        assert response.data["name"] == program2.name
-        assert response.status_code == status.HTTP_200_OK
+@pytest.mark.django_db
+def test_get_one_program(program_objects):
+    program = Program.objects.first()
+    url = reverse("program-detail", args=[program.id])
+    client = Client()
+    response = client.get(url, format="json")
+
+    assert response.data["name"] == program.name
+    assert response.status_code == status.HTTP_200_OK
